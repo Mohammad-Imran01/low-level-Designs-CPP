@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string>
 #include <mutex>
+#include <fstream>
 
 class Logger
 {
@@ -33,7 +34,8 @@ public:
 private:
     Logger();
     std::mutex fileMutex;
-    std::unique_ptr<std::ofstream> myFile;
+    std::unique_ptr<std::fstream> m_file;
 
     std::string logLevelString(Priority);
+    std::string timestamp() const;
 };
