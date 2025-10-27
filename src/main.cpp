@@ -1,23 +1,33 @@
 #include <iostream>
-
-#include "./logger/logger.h"
 #include "constants.h"
+#include "logger.h"
 
 int main()
 {
-    std::cout << "\n\n"
-              << std::endl;
-
-    std::cout << "Hello, Guys!" << std::endl;
-
+    std::cout << "--- Logger Demonstration ---\n" << std::endl;
+    
+    // 1. Get the Logger instance
     auto &lg = Logger::instance();
-    lg.setLogFile((Im::CONST_DIR_APP_FILE).string());
+    
+    // 2. Determine the log file location using the constant path
+    const std::filesystem::path logFilePath = Im::CONST_DIR_APP_FILE;
 
-    lg.info("This code works");
-    lg.error("This code works");
-    lg.warning("This code works");
+    std::cout << "Attempting to set log file to: " << logFilePath.string() << std::endl;
 
-    std::cout << "\n\n"
-              << std::endl;
+    // 3. Set the log file. This will create directories and the file if needed.
+    lg.setLogFile(logFilePath.string());
+
+    // 4. Log various messages
+    lg.info("Application started successfully.");
+    lg.warning("Configuration file not found, using defaults.");
+    
+    // An error log should flush immediately to disk
+    lg.error("A critical system component failed to initialize."); 
+    lg.info("Program running, checking status...");
+
+    std::cout << "\n--- End of Demonstration ---\n";
+    std::cout << "Check the file: " << logFilePath.string() << " to see the output." << std::endl;
+    
+    // Logger destructor called automatically upon exiting main()
     return 0;
 }
