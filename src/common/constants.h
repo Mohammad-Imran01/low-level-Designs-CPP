@@ -4,7 +4,20 @@
 
 namespace Im
 {
-    static const std::filesystem::path CONST_DIR_APP_FILE = std::filesystem::path(
-                                                                std::getenv("USERPROFILE")) /
-                                                            "Downloads" / "LoggerTemp" / "log.txt";
+    inline std::filesystem::path getUserHome()
+    {
+        const char *homeDir = nullptr;
+#ifdef _WIN32
+        homeDir = std::getenv("USERPROFILE");
+#else
+        homeDir = std::getenv("HOME");
+#endif
+        if (!homeDir)
+            homeDir = "."; // fallback to current directory
+
+        return std::filesystem::path(homeDir);
+    }
+
+    static const std::filesystem::path CONST_DIR_APP_FILE =
+        getUserHome() / "Downloads" / "LoggerTemp" / "log.txt";
 }
