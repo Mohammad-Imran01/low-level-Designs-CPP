@@ -1,79 +1,40 @@
 #include "logger.h"
 
+#include <filesystem>
+#include <iostream>
+#include <stdexcept>
+#include <ctime>
 #include <iomanip>
-#include <chrono>
+
+// --- Singleton Implementation ---
 
 Logger &Logger::instance()
 {
+    // Thread-safe initialization since C++11
     static Logger inst;
     return inst;
 }
 
+// --- Constructor / Destructor ---
+
 Logger::Logger()
 {
-    // You can initialize anything here if needed
     std::cout << "Logger initialized.\n";
 }
 
 Logger::~Logger()
 {
+    // Close the file stream safely
     std::scoped_lock locker(fileMutex);
     if (m_file && m_file->is_open())
     {
         m_file->close();
     }
-    std::cout << "\nLogger destroyed!";
+    std::cout << "\nLogger destroyed!\n";
 }
 
-void Logger::setLogFile(const std::string &fileLocation)
-{
-    std::scoped_lock locker(fileMutex);
+// --- Utility Functions ---
 
-    if (m_file && m_file->is_open())
-        m_file->close();
-
-    m_file = std::make_unique<std::fstream>(fileLocation, std::ios::out | std::ios::app);
-    if (!m_file || !m_file->is_open())
-    {
-        std::ofstream create(fileLocation);
-        create.close();
-        m_file = std::make_unique<std::fstream>(fileLocation, std::ios::out | std::ios::app);
-    }
-
-    if (!m_file->is_open())
-        throw std::runtime_error("Failed to open/create the log file. " + fileLocation);
-}
-void Logger::log(Priority level, const std::string &message)
-{
-    std::string toLog =
-        "[" + timestamp() + "] [" + logLevelString(level) + "] " + message + "\n";
-
-    std::scoped_lock locker(fileMutex);
-    std::cout << toLog;
-
-    if (m_file && m_file->is_open())
-    {
-        *m_file << toLog;
-        m_file->flush();
-    }
-    else
-    {
-        std::cerr << "Log file not open.\n";
-    }
-}
-
-void Logger::info(const std::string &message)
-{
-    log(Priority::INFO, message);
-}
-void Logger::warning(const std::string &message)
-{
-    log(Priority::WARNING, message);
-}
-void Logger::error(const std::string &message)
-{
-    log(Priority::ERROR, message);
-}
 std::string Logger::logLevelString(Priority priority)
 {
     switch (priority)
@@ -91,22 +52,105 @@ std::string Logger::logLevelString(Priority priority)
 
 std::string Logger::timestamp() const
 {
-    //     auto now = std::chrono::system_clock::now();
-    //     std::time_t now_c = std::chrono::system_clock::to_time_t(now);
-    //     std::tm tm{};
-    // #ifdef _WIN32
-    //     localtime_s(&tm, &now_c);
-    // #else
-    //     localtime_r(&now_c, &tm);
-    // #endif
-    //     std::ostringstream oss;
-    //     oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
-    //     return oss.str();
+    // Correct C/POSIX format specifiers
+    static const char *FORMAT = "%Y-%m-%d %H:%M:%S"; 
 
-    static const char *FORMAT = "YYYY-MM-DD HH:MM:SS";
     std::time_t timer = std::time({});
     char buf[30];
-    if (std::strftime(buf, sizeof(buf), FORMAT, std::localtime(&timer)));
-    return buf;
-    return FORMAT;
+
+    // Convert time to string using local time
+    if (std::strftime(buf, sizeof(buf), FORMAT, std::localtime(&timer)))
+        return buf;
+
+    return "[TIME_ERROR]";
+}
+
+// --- File Setup ---
+
+void Logger::setLogFile(const std::string &fileLocation)
+{
+    std::filesystem::path filePath(fileLocation);
+    std::scoped_lock locker(fileMutex);
+
+    try
+    {
+        // 1. Create parent directories recursively
+        std::filesystem::path parentDir = filePath.parent_path();
+        if (!parentDir.empty())
+        {
+            // Create directories and ignore the return value (relying on try/catch 
+            // to handle exceptions on permission errors, etc.)
+            std::filesystem::create_directories(parentDir); 
+        }
+
+        // 2. Close the existing file handle if open
+        if (m_file && m_file->is_open())
+            m_file->close();
+
+        // 3. Open the file in append mode. This will create it if it doesn't exist.
+        m_file = std::make_unique<std::fstream>(filePath, std::ios::out | std::ios::app);
+
+        // 4. Check for success
+        if (!m_file || !m_file->is_open())
+        {
+            // Log to console if we failed to open the requested log file
+            std::cerr << "ERROR: Failed to open log file '" << fileLocation
+                      << "'. Logging to file is disabled." << std::endl;
+            
+            // Set unique_ptr to null, preventing future attempts to write to it
+            m_file.reset(); 
+        }
+    }
+    catch (const std::exception &e)
+    {
+        // Catch exceptions from filesystem operations or fstream
+        std::cerr << "ERROR: Exception during log file setup for '" << fileLocation
+                  << "'. Reason: " << e.what() << std::endl;
+        m_file.reset();
+    }
+    catch (...)
+    {
+        std::cerr << "ERROR: Unknown exception during log file setup for '" << fileLocation << "'" << std::endl;
+        m_file.reset();
+    }
+}
+
+// --- Logging Methods ---
+
+void Logger::log(Priority level, const std::string &message)
+{
+    // Format the log message
+    std::string toLog =
+        "[" + timestamp() + "] [" + logLevelString(level) + "] " + message + "\n";
+
+    std::scoped_lock locker(fileMutex);
+    
+    // Always print to console
+    std::cout << toLog;
+
+    if (m_file && m_file->is_open())
+    {
+        // Write to file
+        *m_file << toLog;
+
+        // CRITICAL LOG FLUSH: Only flush immediately for ERRORs to ensure 
+        // they are written to disk before a potential crash.
+        if (level == Priority::ERROR)
+        {
+            m_file->flush();
+        }
+    }
+}
+
+void Logger::info(const std::string &message)
+{
+    log(Priority::INFO, message);
+}
+void Logger::warning(const std::string &message)
+{
+    log(Priority::WARNING, message);
+}
+void Logger::error(const std::string &message)
+{
+    log(Priority::ERROR, message);
 }

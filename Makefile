@@ -9,7 +9,7 @@ configure:
 build: configure
 	cmake --build ./build
 
-run: build
+run: 
 	.\build\src\Debug\LowLevelCppDesigns.exe
 
 clean:

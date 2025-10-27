@@ -1,41 +1,48 @@
 #pragma once
 
-#include <memory>
-#include <sstream>
-#include <filesystem>
-#include <iostream>
 #include <string>
-#include <mutex>
 #include <fstream>
+#include <memory>
+#include <mutex>
 
 class Logger
 {
-
 public:
-    enum Priority
-    {
-        INFO,
-        WARNING,
-        ERROR
-    };
-
+    // Singleton access method (Meyers Singleton)
     static Logger &instance();
-    void setLogFile(const std::string &fileLocation);
-    void log(Priority level, const std::string &message);
 
+    // Deleted copy constructor and assignment operator to enforce Singleton
+    Logger(const Logger &) = delete;
+    Logger &operator=(const Logger &) = delete;
+
+    // Public API for logging
     void info(const std::string &message);
     void warning(const std::string &message);
     void error(const std::string &message);
 
-    ~Logger();
-    Logger(const Logger &) = delete;
-    Logger &operator=(const Logger &) = delete;
+    // Setup function for the log file
+    void setLogFile(const std::string &fileLocation);
 
 private:
-    Logger();
-    std::mutex fileMutex;
-    std::unique_ptr<std::fstream> m_file;
+    // Log priority levels
+    enum class Priority { INFO, WARNING, ERROR };
 
-    std::string logLevelString(Priority);
+    // Private constructor and destructor
+    Logger();
+    ~Logger();
+
+    // The thread-safe logging function
+    void log(Priority level, const std::string &message);
+
+    // Utility functions
+    std::string logLevelString(Priority priority);
     std::string timestamp() const;
+
+private:
+    // Member variables
+    // Mutex for thread-safe file access
+    std::mutex fileMutex;
+    
+    // Unique pointer to manage the file stream lifetime
+    std::unique_ptr<std::fstream> m_file; 
 };
