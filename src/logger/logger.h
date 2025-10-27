@@ -38,11 +38,7 @@ private:
     std::string logLevelString(Priority priority);
     std::string timestamp() const;
 
-private:
-    // Member variables
-    // Mutex for thread-safe file access
-    std::mutex fileMutex;
-    
-    // Unique pointer to manage the file stream lifetime
+private: 
+    std::mutex fileMutex; 
     std::unique_ptr<std::fstream> m_file; 
 };

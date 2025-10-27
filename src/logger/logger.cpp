@@ -5,17 +5,14 @@
 #include <stdexcept>
 #include <ctime>
 #include <iomanip>
-
-// --- Singleton Implementation ---
+ 
 
 Logger &Logger::instance()
-{
-    // Thread-safe initialization since C++11
+{ 
     static Logger inst;
     return inst;
 }
-
-// --- Constructor / Destructor ---
+ 
 
 Logger::Logger()
 {
@@ -32,8 +29,7 @@ Logger::~Logger()
     }
     std::cout << "\nLogger destroyed!\n";
 }
-
-// --- Utility Functions ---
+ 
 
 std::string Logger::logLevelString(Priority priority)
 {
@@ -51,21 +47,18 @@ std::string Logger::logLevelString(Priority priority)
 }
 
 std::string Logger::timestamp() const
-{
-    // Correct C/POSIX format specifiers
+{ 
     static const char *FORMAT = "%Y-%m-%d %H:%M:%S"; 
 
     std::time_t timer = std::time({});
     char buf[30];
-
-    // Convert time to string using local time
+ 
     if (std::strftime(buf, sizeof(buf), FORMAT, std::localtime(&timer)))
         return buf;
 
     return "[TIME_ERROR]";
 }
-
-// --- File Setup ---
+ 
 
 void Logger::setLogFile(const std::string &fileLocation)
 {
@@ -73,27 +66,22 @@ void Logger::setLogFile(const std::string &fileLocation)
     std::scoped_lock locker(fileMutex);
 
     try
-    {
-        // 1. Create parent directories recursively
+    { 
         std::filesystem::path parentDir = filePath.parent_path();
         if (!parentDir.empty())
-        {
-            // Create directories and ignore the return value (relying on try/catch 
-            // to handle exceptions on permission errors, etc.)
+        { 
             std::filesystem::create_directories(parentDir); 
         }
-
-        // 2. Close the existing file handle if open
+ 
         if (m_file && m_file->is_open())
             m_file->close();
 
-        // 3. Open the file in append mode. This will create it if it doesn't exist.
+        // Open the file in append mode. This will create it if it doesn't exist.
         m_file = std::make_unique<std::fstream>(filePath, std::ios::out | std::ios::app);
 
         // 4. Check for success
         if (!m_file || !m_file->is_open())
-        {
-            // Log to console if we failed to open the requested log file
+        { 
             std::cerr << "ERROR: Failed to open log file '" << fileLocation
                       << "'. Logging to file is disabled." << std::endl;
             
@@ -102,8 +90,7 @@ void Logger::setLogFile(const std::string &fileLocation)
         }
     }
     catch (const std::exception &e)
-    {
-        // Catch exceptions from filesystem operations or fstream
+    { 
         std::cerr << "ERROR: Exception during log file setup for '" << fileLocation
                   << "'. Reason: " << e.what() << std::endl;
         m_file.reset();
@@ -114,16 +101,14 @@ void Logger::setLogFile(const std::string &fileLocation)
         m_file.reset();
     }
 }
-
-// --- Logging Methods ---
+ 
 
 void Logger::log(Priority level, const std::string &message)
-{
-    // Format the log message
+{ 
     std::string toLog =
         "[" + timestamp() + "] [" + logLevelString(level) + "] " + message + "\n";
 
-    std::scoped_lock locker(fileMutex);
+     std::scoped_lock locker(fileMutex);
     
     // Always print to console
     std::cout << toLog;
@@ -132,9 +117,7 @@ void Logger::log(Priority level, const std::string &message)
     {
         // Write to file
         *m_file << toLog;
-
-        // CRITICAL LOG FLUSH: Only flush immediately for ERRORs to ensure 
-        // they are written to disk before a potential crash.
+ 
         if (level == Priority::ERROR)
         {
             m_file->flush();
