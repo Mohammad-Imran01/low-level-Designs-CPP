@@ -13,7 +13,10 @@ int main()
     auto &lg = Logger::instance();
     lg.setLogFile((Im::CONST_DIR_APP_FILE).string());
 
+    lg.info("This code works");
     lg.error("This code works");
+    lg.warning("This code works");
+
     std::cout << "\n\n"
               << std::endl;
     return 0;
