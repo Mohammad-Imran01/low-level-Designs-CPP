@@ -4,8 +4,8 @@
 
 int main()
 {
-    std::cout << "--- Logger Demonstration ---\n"
-              << std::endl;
+    // std::cout << "--- Logger Demonstration ---\n"
+    //           << std::endl;
 
     // 1. Get the Logger instance
     auto &lg = Logger::instance();
