@@ -9,8 +9,9 @@ configure:
 build: configure
 	cmake --build ./build
 
-run: 
+run: build
 	.\build\src\Debug\LowLevelCppDesigns.exe
 
 clean:
 	if exist .\build rmdir /s /q .\build   
+	

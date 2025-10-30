@@ -1,7 +1,6 @@
-# Logger library name variable
-set(LOGGER_LIB_NAME Logger)
+add_library(lib_logger STATIC
+    logger.cpp
+    logger.h
+)
 
-add_library(${LOGGER_LIB_NAME} STATIC logger.cpp )
-
-# Make include directories available to consumers
-target_include_directories(${LOGGER_LIB_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(lib_logger PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
